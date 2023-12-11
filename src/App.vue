@@ -13,7 +13,9 @@
             <RouterLink to="/LiveStandings">Live Timing</RouterLink></b-nav-item
           >
           <b-nav-item>
-            <RouterLink to="/TracksArchive">Archive</RouterLink></b-nav-item
+            <RouterLink to="/TracksArchive"
+              >Track Records</RouterLink
+            ></b-nav-item
           >
         </b-navbar-nav>
       </b-navbar>

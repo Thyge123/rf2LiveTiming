@@ -3,6 +3,9 @@
 #app {
   margin: 0 auto;
   font-weight: normal;
+  padding-left: 1%;
+  padding-right: 1%;
+  padding-bottom: 1%;
 }
 
 a,
