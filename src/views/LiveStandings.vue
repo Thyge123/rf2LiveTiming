@@ -45,7 +45,6 @@ export default {
       currentEventTime: 0,
       endEventTime: 0,
       remaningTime: 0,
-      test: 0,
       coordinates: [],
       selectedCarClass: "Class: All",
       searchQuery: "",

@@ -82,14 +82,28 @@ export default {
                   ],
                 };
               } else {
-                driverLaps[element.Name].laps.push({
-                  lapTime: sec2time(element.lapTime),
-                  sector1: element.sector1,
-                  sector2: element.sector2,
-                  sector3: element.sector3,
-                  fuel: element.fuel,
-                  car: element.carType,
-                });
+                // Check if a lap with the same details already exists
+                const existingLap = driverLaps[element.Name].laps.find(
+                  (lap) =>
+                    lap.lapTime === sec2time(element.lapTime) &&
+                    lap.sector1 === element.sector1 &&
+                    lap.sector2 === element.sector2 &&
+                    lap.sector3 === element.sector3 &&
+                    lap.fuel === element.fuel &&
+                    lap.car === element.carType
+                );
+
+                // Only add the new lap if it doesn't already exist
+                if (!existingLap) {
+                  driverLaps[element.Name].laps.push({
+                    lapTime: sec2time(element.lapTime),
+                    sector1: element.sector1,
+                    sector2: element.sector2,
+                    sector3: element.sector3,
+                    fuel: element.fuel,
+                    car: element.carType,
+                  });
+                }
               }
             });
 
