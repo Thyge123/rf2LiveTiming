@@ -4,7 +4,7 @@ export default {
     return {
       isLoading: true,
       tracks: [],
-      trackVenue: "",
+      trackCourse: "",
       fields: [
         { key: "details", label: "" },
         { key: "position", label: "POS" },
@@ -13,16 +13,20 @@ export default {
         { key: "Name", label: "Name" },
         { key: "vehName", label: "Description" },
         { key: "carType", label: "Car" },
-        { key: "sector1", label: "Sector1" },
-        { key: "sector2", label: "Sector2" },
-        { key: "sector3", label: "Sector3" },
+        { key: "sector1", label: "Sector 1" },
+        { key: "sector2", label: "Sector 2" },
+        { key: "sector3", label: "Sector 3" },
         { key: "bestLapTime", label: "Lap Time" },
         { key: "fuel", label: "Fuel" },
+        { key: "totalLaps", label: "Laps" },
       ],
       standings: [],
       carClassColor: {
         LMH: "#e02d2d",
         LMP2: "#006bd5",
+        GTE: "#037539",
+        GT3: "#FE5000",
+        Championship: "#037539",
       },
       randomColors: {},
       selectedCarClass: "Class: All",
@@ -52,11 +56,12 @@ export default {
     },
   },
   methods: {
-    async getTracks() {
+    async GetRecords() {
       try {
         await this.axios
-          .get(`https://localhost:7190/api/Track/laps/${this.trackVenue}`)
+          .get(`https://localhost:7190/api/Track/laps/${this.trackCourse}`)
           .then((response) => {
+            console.log(response.data);
             this.standings = response.data;
             this.standings.sort((a, b) => a.lapTime - b.lapTime);
             const driverLaps = {};
@@ -111,6 +116,7 @@ export default {
             this.standings.sort((a, b) => a.bestLapTime - b.bestLapTime);
             this.standings.forEach((element, index) => {
               element.position = index + 1;
+              element.totalLaps = element.laps.length;
             });
           });
       } catch (error) {
@@ -160,8 +166,8 @@ export default {
     },
   },
   created() {
-    this.trackVenue = this.$route.params.trackVenue;
-    this.getTracks();
+    this.trackCourse = this.$route.params.trackVenue;
+    this.GetRecords();
     this.isLoading = false;
   },
 };
@@ -190,7 +196,7 @@ function sec2time(timeInSeconds) {
       <div class="card text-white bg-dark">
         <div class="card-body">
           <div class="row">
-            <H2>Track Records: {{ trackVenue }}</H2>
+            <H2>Track Records: {{ trackCourse }}</H2>
           </div>
         </div>
       </div>
@@ -201,7 +207,6 @@ function sec2time(timeInSeconds) {
           <div class="row">
             <div class="col-md-1">
               <b-form-select v-model="selectedCarClass" style="height: 100%">
-                <option disabled value="">Please select a car class</option>
                 <option
                   v-for="carClass in uniqueCarClasses"
                   :key="carClass"

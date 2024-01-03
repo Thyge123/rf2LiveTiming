@@ -1,6 +1,4 @@
 <script>
-import { parseResults } from "rf2-results-parser";
-import fs from "fs";
 export default {
   data() {
     return {
@@ -14,7 +12,7 @@ export default {
   },
   computed: {},
   methods: {
-    async getTracks() {
+    async getAllTracks() {
       try {
         await this.axios
           .get("https://localhost:7190/api/Track")
@@ -25,38 +23,15 @@ export default {
         this.errorMessage = error;
       }
     },
-    RouteTrack(test) {
-      console.log(test);
-      let routeValue = test;
+    RouteTrack(track) {
       this.$router.push({
         name: "TrackRecordsArchive",
-        params: { trackVenue: routeValue },
+        params: { trackVenue: track },
       });
-    },
-    async ReadResultsFile() {
-      try {
-        await this.axios
-          .get(
-            "https://localhost:7190/api/rF2XML/GetAllXMLResults?directoryPath=D%3A%5C%5CRacing%5C%5Crfactor2-dedicated%5C%5CUserData%5C%5CLog%5C%5CResults"
-          )
-          .then((response) => {
-            this.raceResults = response.data;
-            fs.readFile(response.data[48].content, (err, data) => {
-              const resultsData = parseResults(data);
-              console.log(resultsData);
-              this.test = resultsData;
-              console.log(data);
-            });
-          });
-      } catch (error) {
-        this.errorMessage = error;
-      }
-      console.log(this.test);
     },
   },
   created() {
-    this.getTracks();
-    this.ReadResultsFile();
+    this.getAllTracks();
     this.isLoading = false;
   },
 };

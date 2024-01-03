@@ -1,5 +1,4 @@
 <script>
-//import VueCookies from "vue-cookies";
 const baseUrl = "http://192.168.1.62/rfactor2-api/rest/";
 export default {
   data() {
@@ -28,7 +27,6 @@ export default {
         GT3: "#FE5000",
       },
       randomColors: {},
-      carIds: [],
       standings2: [],
       trackName: "",
       session: "",
@@ -83,9 +81,15 @@ export default {
         this.GenerateXMLResults();
       }
     },
+    filteredStandings: {
+      handler: function () {
+        this.calculatePositionInCarClass();
+      },
+      deep: true,
+    },
   },
   methods: {
-    async getList() {
+    async GetStandings() {
       try {
         await this.axios.get(baseUrl + "watch/standings").then((response) => {
           this.standings = response.data;
@@ -97,7 +101,6 @@ export default {
             element.gap = element.timeBehindNext.toFixed(3);
             element.fullTeamName =
               "#" + element.carNumber + " " + element.fullTeamName;
-            this.carIds.push(element.carId);
           });
         });
         this.leaderLaps = this.standings[0].lapsCompleted;
@@ -105,13 +108,14 @@ export default {
           await this.calculateGap();
         }
       } catch (error) {
-        (this.errorMessage = "An error occurred while getting session info:") +
+        (this.errorMessage =
+          "An error occurred while getting session info. Please refresh the page:") +
           error;
       }
     },
     async getSessionInfo() {
       try {
-        this.yellowflags.pop();
+        this.yellowflags = [];
         await this.axios.get(baseUrl + "watch/sessionInfo").then((response) => {
           this.trackName = response.data.trackName;
           this.session = response.data.session.slice(0, -1);
@@ -123,19 +127,15 @@ export default {
           this.maxLaps = response.data.maximumLaps;
           this.remaningTime = secondsToHms(this.remaningTime);
           this.yellowflags.push(response.data.sectorFlag);
-          if (this.yellowflags[0]?.includes("YELLOW")) {
-            this.s1 = true;
-          }
-          if (this.yellowflags[1]?.includes("YELLOW")) {
-            this.s2 = true;
-          }
-          if (this.yellowflags[2]?.includes("YELLOW")) {
-            this.s3 = true;
+          for (let i = 0; i < 3; i++) {
+            this[`s${i + 1}`] =
+              this.yellowflags[i]?.includes("YELLOW") || false;
           }
         });
       } catch (error) {
         this.errorMessage =
-          ("An error occurred while getting session info:", error);
+          ("An error occurred while getting session info. Please refresh the page:",
+          error);
       }
     },
     async getCarImage(carId) {
@@ -271,9 +271,8 @@ export default {
   },
   async created() {
     await this.getSessionInfo();
-    await this.getList();
+    await this.GetStandings();
     await this.getCarImage();
-    await this.generateTrackMap();
     await this.calculatePositionInCarClass();
     this.isLoading = false;
   },
@@ -281,7 +280,7 @@ export default {
   mounted: function () {
     window.setInterval(() => {
       this.getSessionInfo();
-      this.getList();
+      this.GetStandings();
     }, 1000);
   },
 };
@@ -464,7 +463,6 @@ function sec2time(timeInSeconds) {
             borderless
             :items="filteredStandings"
             :fields="fields"
-            :key="test"
           >
             <template #cell(carClass)="data">
               <div

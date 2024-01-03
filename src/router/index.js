@@ -22,11 +22,6 @@ const router = new VueRouter({
       component: () => import("../views/AboutView.vue"),
     },
     {
-      path: "/rF2",
-      name: "rF2",
-      component: () => import("../views/rF2Test.vue"),
-    },
-    {
       path: "/LiveStandings",
       name: "LiveStandings",
       component: () => import("../views/LiveStandings.vue"),
