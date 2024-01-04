@@ -51,6 +51,7 @@ export default {
       maxLaps: 0,
       LeaderLaps: 0,
       errorMessage: null,
+      hasConnection: false,
     };
   },
   computed: {
@@ -93,6 +94,7 @@ export default {
       try {
         await this.axios.get(baseUrl + "watch/standings").then((response) => {
           this.standings = response.data;
+          this.hasConnection = true;
           this.standings.sort((a, b) => a.position - b.position);
           this.standings.forEach((element) => {
             element.lastLapTime = parseFloat(element.lastLapTime).toFixed(3);
@@ -108,15 +110,17 @@ export default {
           await this.calculateGap();
         }
       } catch (error) {
-        (this.errorMessage =
-          "An error occurred while getting session info. Please refresh the page:") +
-          error;
+        this.hasConnection = false;
+        this.errorMessage =
+          "An error occurred while getting session info. Please refresh the page. " +
+          error.message;
       }
     },
     async getSessionInfo() {
       try {
         this.yellowflags = [];
         await this.axios.get(baseUrl + "watch/sessionInfo").then((response) => {
+          this.hasConnection = true;
           this.trackName = response.data.trackName;
           this.session = response.data.session.slice(0, -1);
           this.trackTemp = parseFloat(response.data.trackTemp).toFixed(1);
@@ -133,9 +137,10 @@ export default {
           }
         });
       } catch (error) {
+        this.hasConnection = false;
         this.errorMessage =
-          ("An error occurred while getting session info. Please refresh the page:",
-          error);
+          "An error occurred while getting session info. Please refresh the page.   " +
+          error.message;
       }
     },
     async getCarImage(carId) {
@@ -265,7 +270,7 @@ export default {
           });
       } catch (error) {
         this.errorMessage =
-          ("An error occurred while generating XML results:", error);
+          ("An error occurred while generating XML results:", error.message);
       }
     },
   },
@@ -278,10 +283,12 @@ export default {
   },
 
   mounted: function () {
-    window.setInterval(() => {
-      this.getSessionInfo();
-      this.GetStandings();
-    }, 1000);
+    if (this.hasConnection) {
+      window.setInterval(() => {
+        this.getSessionInfo();
+        this.GetStandings();
+      }, 1000);
+    }
   },
 };
 
