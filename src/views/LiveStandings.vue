@@ -51,7 +51,8 @@ export default {
       maxLaps: 0,
       LeaderLaps: 0,
       errorMessage: null,
-      hasConnection: false,
+      hasConnection: true,
+      trackData: [],
     };
   },
   computed: {
@@ -94,7 +95,6 @@ export default {
       try {
         await this.axios.get(baseUrl + "watch/standings").then((response) => {
           this.standings = response.data;
-          this.hasConnection = true;
           this.standings.sort((a, b) => a.position - b.position);
           this.standings.forEach((element) => {
             element.lastLapTime = parseFloat(element.lastLapTime).toFixed(3);
@@ -120,7 +120,6 @@ export default {
       try {
         this.yellowflags = [];
         await this.axios.get(baseUrl + "watch/sessionInfo").then((response) => {
-          this.hasConnection = true;
           this.trackName = response.data.trackName;
           this.session = response.data.session.slice(0, -1);
           this.trackTemp = parseFloat(response.data.trackTemp).toFixed(1);
@@ -192,40 +191,19 @@ export default {
     async generateTrackMap() {
       try {
         await this.axios.get(baseUrl + "watch/trackmap").then((response) => {
-          this.coordinates = response.data;
+          this.trackData = response.data.filter(
+            (item) => item.type === 0 || item.type === 1
+          );
+          this.trackData = response.data;
+          this.trackMap();
         });
-        this.generatePathData();
+        //this.generatePathData();
       } catch (error) {
         this.errorMessage =
           ("An error occurred while generating the track map:", error);
       }
     },
-    calculateControlPoints() {
-      let controlPoints = [];
-      for (let i = 0; i < this.coordinates.length; i++) {
-        let p0 = i > 0 ? this.coordinates[i - 1] : this.coordinates[i];
-        let p1 = this.coordinates[i];
-        let p2 = i < this.coordinates.length - 1 ? this.coordinates[i + 1] : p1;
-        let cp1 = { x: p1.x + (p2.x - p0.x) / 3, y: p1.y + (p2.y - p0.y) / 3 };
-        let cp2 = { x: p2.x - (p2.x - p1.x) / 3, y: p2.y - (p2.y - p1.y) / 3 };
-        controlPoints.push([cp1, cp2]);
-      }
-      return controlPoints;
-    },
-    //Function to generate a path data string with cubic Bezier curves
-    generatePathData() {
-      let controlPoints = this.calculateControlPoints();
-      let pathData = "";
-      this.coordinates.forEach((element, index) => {
-        if (index === 0) {
-          pathData += `M ${element.x} ${element.y} `;
-        } else {
-          let cp = controlPoints[index - 1];
-          pathData += `C ${cp[0].x} ${cp[0].y} ${cp[1].x} ${cp[1].y} ${element.x} ${element.y} `;
-        }
-      });
-      return pathData;
-    },
+
     getCarClassColor(carClass) {
       if (!this.randomColors[carClass]) {
         this.randomColors[carClass] = this.getRandomColor();
@@ -279,16 +257,21 @@ export default {
     await this.GetStandings();
     await this.getCarImage();
     await this.calculatePositionInCarClass();
+
     this.isLoading = false;
   },
 
   mounted: function () {
-    if (this.hasConnection) {
+    if (this.hasConnection == true) {
       window.setInterval(() => {
         this.getSessionInfo();
         this.GetStandings();
       }, 1000);
     }
+  },
+
+  beforeDestroy() {
+    clearInterval(this.interval);
   },
 };
 
@@ -425,23 +408,7 @@ function sec2time(timeInSeconds) {
         </div>
       </div>
     </div>
-    <div class="row">
-      <div class="card text-white bg-dark">
-        <div class="card-body">
-          <div class="trackMap">
-            <svg>
-              <path
-                stroke="#ffffff"
-                fill="none"
-                stroke-width="15"
-                :d="generatePathData()"
-                style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0)"
-              ></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
+
     <div class="row">
       <div class="card text-white bg-dark">
         <div class="card-body">
@@ -524,11 +491,6 @@ function sec2time(timeInSeconds) {
 .trackMap {
   display: flex;
   justify-content: center;
-}
-
-svg {
-  overflow: visible;
-  transform: scale(0.5);
 }
 
 .sectors p {

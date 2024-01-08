@@ -21,6 +21,7 @@
     "bootstrap": "^5.3.2",
     "bootstrap-icons": "^1.11.2",
     "bootstrap-vue": "^2.23.1",
+    "d3": "^7.8.5",
     "js-base64": "^3.7.5",
     "js-cookie": "^3.0.5",
     "rf2-results-parser": "^1.0.0",
