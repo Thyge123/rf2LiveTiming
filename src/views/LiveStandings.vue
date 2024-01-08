@@ -17,7 +17,7 @@ export default {
         { key: "bestLapTime", label: "Best" },
         "gap",
         { key: "gapToLeader", label: "Gap Leader" },
-        "pitstops",
+
         { key: "lapsCompleted", label: "Laps" },
       ],
       carClassColor: {
@@ -91,6 +91,18 @@ export default {
     },
   },
   methods: {
+    async checkAPIConnection() {
+      try {
+        const response = await this.axios.get(
+          "http://192.168.1.62/rfactor2-api/swagger/index.html"
+        );
+        console.log(response);
+        return response.status === 200;
+      } catch (error) {
+        console.error("API connection error:", error);
+        return false;
+      }
+    },
     async GetStandings() {
       try {
         await this.axios.get(baseUrl + "watch/standings").then((response) => {
@@ -108,6 +120,8 @@ export default {
         this.leaderLaps = this.standings[0].lapsCompleted;
         if (!this.session.includes("RACE")) {
           await this.calculateGap();
+        } else {
+          this.fields.push("pitstops");
         }
       } catch (error) {
         this.hasConnection = false;
@@ -253,17 +267,17 @@ export default {
     },
   },
   async created() {
+    await this.checkAPIConnection();
     await this.getSessionInfo();
     await this.GetStandings();
     await this.getCarImage();
     await this.calculatePositionInCarClass();
-
     this.isLoading = false;
   },
 
-  mounted: function () {
-    if (this.hasConnection == true) {
-      window.setInterval(() => {
+  mounted: async function () {
+    if (await this.checkAPIConnection()) {
+      this.interval = setInterval(() => {
         this.getSessionInfo();
         this.GetStandings();
       }, 1000);
