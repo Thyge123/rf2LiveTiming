@@ -122,7 +122,6 @@ export default {
         driverName: s.positionInCarClass,
         carClassColor: this.getCarClassColor(s.carClass), // Use the getCarClassColor method
       }));
-      console.log(carPositions);
 
       // Select the SVG container where the cars will be drawn
       const svg = d3.select(".trackMap svg");
