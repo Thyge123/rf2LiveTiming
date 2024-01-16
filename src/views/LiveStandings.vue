@@ -1,4 +1,5 @@
 <script>
+import * as d3 from "d3";
 const baseUrl = "http://192.168.1.62/rfactor2-api/rest/";
 export default {
   data() {
@@ -53,6 +54,9 @@ export default {
       errorMessage: null,
       hasConnection: true,
       trackData: [],
+      waypoints: null,
+      trackPath: "",
+      carPaths: "",
     };
   },
   computed: {
@@ -91,12 +95,71 @@ export default {
     },
   },
   methods: {
+    async drawTrack() {
+      await this.axios.get(baseUrl + "watch/trackmap").then((response) => {
+        this.waypoints = response.data.filter(
+          (waypoint) => waypoint.type === 0
+        );
+      });
+      const line = d3
+        .line()
+        .curve(d3.curveCardinal) // Change this line
+        .x((d) => {
+          return d.x;
+        })
+        .y((d) => {
+          return d.z;
+        });
+
+      // Generate the SVG path
+      const path = line(this.waypoints);
+
+      this.trackPath = path;
+    },
+    drawCars() {
+      const carPositions = this.standings.map((s) => ({
+        ...s.carPosition,
+        driverName: s.positionInCarClass,
+        carClassColor: this.getCarClassColor(s.carClass), // Use the getCarClassColor method
+      }));
+      console.log(carPositions);
+
+      // Select the SVG container where the cars will be drawn
+      const svg = d3.select(".trackMap svg");
+
+      // Bind carPositions to the SVG circles and update their positions
+      svg
+        .selectAll("circle")
+        .data(carPositions)
+        .join("circle")
+        .attr("cx", (d) => d.x)
+        .attr("cy", (d) => d.z)
+        .attr("r", Math.sqrt(100))
+        .attr("fill", (d) => d.carClassColor); // Use the carClassColor property for the fill color
+
+      // Bind carPositions to the SVG text elements and update their positions
+      svg
+        .selectAll("text")
+        .data(carPositions)
+        .join("text")
+        .attr("x", (d) => d.x)
+        .attr("y", (d) => d.z + 2.5)
+        .text((d) => d.driverName) // Use the driverName property for the text
+        .attr("font-family", "sans-serif")
+        .attr("font-size", "12px")
+        .attr("fill", "white")
+        .attr("text-anchor", "middle") // Center the text horizontally
+        .attr(
+          "transform",
+          (d) =>
+            `translate(${d.x}, ${d.z}) scale(-1, 1) translate(${-d.x}, ${-d.z})`
+        );
+    },
     async checkAPIConnection() {
       try {
         const response = await this.axios.get(
           "http://192.168.1.62/rfactor2-api/swagger/index.html"
         );
-        console.log(response);
         return response.status === 200;
       } catch (error) {
         console.error("API connection error:", error);
@@ -268,6 +331,7 @@ export default {
   },
   async created() {
     await this.checkAPIConnection();
+    await this.drawTrack();
     await this.getSessionInfo();
     await this.GetStandings();
     await this.getCarImage();
@@ -277,15 +341,16 @@ export default {
 
   mounted: async function () {
     if (await this.checkAPIConnection()) {
-      this.interval = setInterval(() => {
+      this.sessionInfoInterval = setInterval(() => {
         this.getSessionInfo();
         this.GetStandings();
+        this.drawCars();
       }, 1000);
     }
   },
 
   beforeDestroy() {
-    clearInterval(this.interval);
+    clearInterval(this.sessionInfoInterval);
   },
 };
 
@@ -422,7 +487,17 @@ function sec2time(timeInSeconds) {
         </div>
       </div>
     </div>
-
+    <div class="row" style="height: 400px">
+      <div class="card text-white bg-dark">
+        <div class="card-body">
+          <div class="trackMap">
+            <svg>
+              <path :d="trackPath" stroke="white" fill="none"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="row">
       <div class="card text-white bg-dark">
         <div class="card-body">
@@ -501,12 +576,6 @@ function sec2time(timeInSeconds) {
   justify-content: center;
   gap: 10px;
 }
-
-.trackMap {
-  display: flex;
-  justify-content: center;
-}
-
 .sectors p {
   padding-top: 0.75rem;
   font-weight: bolder;
@@ -553,5 +622,19 @@ td {
 .error-message {
   color: red;
   font-weight: bold;
+}
+
+svg {
+  overflow: visible;
+  transform: rotate(-25deg) scale(-0.6, 0.6);
+  top: 225px;
+  stroke-width: 0.25em;
+}
+
+.trackMap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  right: 140px;
 }
 </style>
