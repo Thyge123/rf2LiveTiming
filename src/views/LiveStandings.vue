@@ -1,13 +1,16 @@
 <script>
-import * as d3 from "d3";
+import TrackMap from "../components/TrackMap.vue";
 const baseUrl = "http://192.168.1.62/rfactor2-api/rest/";
 export default {
+  components: {
+    TrackMap,
+  },
   data() {
     return {
       isLoading: true,
       standings: [],
       fields: [
-        { key: "inGarageStall", label: "" },
+        { key: "pitting", label: "" },
         "position",
         { key: "positionInCarClass", label: "PIC" },
         { key: "driverName", label: "Name" },
@@ -44,7 +47,6 @@ export default {
       currentEventTime: 0,
       endEventTime: 0,
       remaningTime: 0,
-      coordinates: [],
       selectedCarClass: "Class: All",
       searchQuery: "",
       carImages: {},
@@ -53,10 +55,6 @@ export default {
       LeaderLaps: 0,
       errorMessage: null,
       hasConnection: true,
-      trackData: [],
-      waypoints: null,
-      trackPath: "",
-      carPaths: "",
     };
   },
   computed: {
@@ -95,65 +93,6 @@ export default {
     },
   },
   methods: {
-    async drawTrack() {
-      await this.axios.get(baseUrl + "watch/trackmap").then((response) => {
-        this.waypoints = response.data.filter(
-          (waypoint) => waypoint.type === 0
-        );
-      });
-      const line = d3
-        .line()
-        .curve(d3.curveCardinal) // Change this line
-        .x((d) => {
-          return d.x;
-        })
-        .y((d) => {
-          return d.z;
-        });
-
-      // Generate the SVG path
-      const path = line(this.waypoints);
-
-      this.trackPath = path;
-    },
-    drawCars() {
-      const carPositions = this.standings.map((s) => ({
-        ...s.carPosition,
-        driverName: s.positionInCarClass,
-        carClassColor: this.getCarClassColor(s.carClass), // Use the getCarClassColor method
-      }));
-
-      // Select the SVG container where the cars will be drawn
-      const svg = d3.select(".trackMap svg");
-
-      // Bind carPositions to the SVG circles and update their positions
-      svg
-        .selectAll("circle")
-        .data(carPositions)
-        .join("circle")
-        .attr("cx", (d) => d.x)
-        .attr("cy", (d) => d.z)
-        .attr("r", Math.sqrt(100))
-        .attr("fill", (d) => d.carClassColor); // Use the carClassColor property for the fill color
-
-      // Bind carPositions to the SVG text elements and update their positions
-      svg
-        .selectAll("text")
-        .data(carPositions)
-        .join("text")
-        .attr("x", (d) => d.x)
-        .attr("y", (d) => d.z + 2.5)
-        .text((d) => d.driverName) // Use the driverName property for the text
-        .attr("font-family", "sans-serif")
-        .attr("font-size", "12px")
-        .attr("fill", "white")
-        .attr("text-anchor", "middle") // Center the text horizontally
-        .attr(
-          "transform",
-          (d) =>
-            `translate(${d.x}, ${d.z}) scale(-1, 1) translate(${-d.x}, ${-d.z})`
-        );
-    },
     async checkAPIConnection() {
       try {
         const response = await this.axios.get(
@@ -264,22 +203,6 @@ export default {
         }
       });
     },
-    async generateTrackMap() {
-      try {
-        await this.axios.get(baseUrl + "watch/trackmap").then((response) => {
-          this.trackData = response.data.filter(
-            (item) => item.type === 0 || item.type === 1
-          );
-          this.trackData = response.data;
-          this.trackMap();
-        });
-        //this.generatePathData();
-      } catch (error) {
-        this.errorMessage =
-          ("An error occurred while generating the track map:", error);
-      }
-    },
-
     getCarClassColor(carClass) {
       if (!this.randomColors[carClass]) {
         this.randomColors[carClass] = this.getRandomColor();
@@ -330,29 +253,26 @@ export default {
   },
   async created() {
     await this.checkAPIConnection();
-    await this.drawTrack();
     await this.getSessionInfo();
     await this.GetStandings();
     await this.getCarImage();
     await this.calculatePositionInCarClass();
     this.isLoading = false;
   },
-
   mounted: async function () {
     if (await this.checkAPIConnection()) {
+      //this.drawTrack();
       this.sessionInfoInterval = setInterval(() => {
         this.getSessionInfo();
         this.GetStandings();
-        this.drawCars();
+        //this.drawCars();
       }, 1000);
     }
   },
-
   beforeDestroy() {
     clearInterval(this.sessionInfoInterval);
   },
 };
-
 const toDataURL = (url) =>
   fetch(url)
     .then((response) => response.blob())
@@ -365,7 +285,6 @@ const toDataURL = (url) =>
           reader.readAsDataURL(blob);
         })
     );
-
 function secondsToHms(d) {
   d = Number(d);
   var h = Math.floor(d / 3600);
@@ -373,7 +292,7 @@ function secondsToHms(d) {
   var s = Math.floor((d % 3600) % 60);
 
   var hDisplay = h > 0 ? h + (h == 1 ? ":" : "  ") : "";
-  var mDisplay = m > 0 ? m + (m == 1 ? "  " : ":") : "";
+  var mDisplay = m > 0 ? m + (m == 1 ? ":" : ":") : "";
   var sDisplay = s > 0 ? (s < 10 ? "0" + s : s) + (s == 1 ? " " : " ") : "";
   return hDisplay + mDisplay + sDisplay;
 }
@@ -486,14 +405,13 @@ function sec2time(timeInSeconds) {
         </div>
       </div>
     </div>
-    <div class="row" style="height: 400px">
+    <div class="row">
       <div class="card text-white bg-dark">
         <div class="card-body">
-          <div class="trackMap">
-            <svg>
-              <path :d="trackPath" stroke="white" fill="none"></path>
-            </svg>
-          </div>
+          <TrackMap
+            :filteredStandings="filteredStandings"
+            :getCarClassColor="getCarClassColor.bind(this)"
+          />
         </div>
       </div>
     </div>
@@ -541,7 +459,7 @@ function sec2time(timeInSeconds) {
             <template v-slot:cell(carImage)="data">
               <img v-bind:src="carImages[data.item.carId]" />
             </template>
-            <template #cell(inGarageStall)="data">
+            <template #cell(pitting)="data">
               <p
                 v-if="data.value === true"
                 style="
@@ -623,17 +541,15 @@ td {
   font-weight: bold;
 }
 
-svg {
-  overflow: visible;
-  transform: rotate(-25deg) scale(-0.6, 0.6);
-  top: 225px;
-  stroke-width: 0.25em;
+.trackMap {
+  height: 500px;
+  flex-grow: 1; /* Allow the trackMap div to grow to fill available space */
+  display: flex; /* Use Flexbox layout */
+  justify-content: center; /* Center content horizontally */
+  align-items: center; /* Center content vertically */
 }
 
-.trackMap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  right: 140px;
+.trackMap svg {
+  stroke-width: 6;
 }
 </style>
