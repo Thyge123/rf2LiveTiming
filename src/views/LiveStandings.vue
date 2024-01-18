@@ -1,9 +1,11 @@
 <script>
 import TrackMap from "../components/TrackMap.vue";
+import SectorFlags from "../components/SectorFlags.vue";
 const baseUrl = "http://192.168.1.62/rfactor2-api/rest/";
 export default {
   components: {
     TrackMap,
+    SectorFlags,
   },
   data() {
     return {
@@ -80,11 +82,6 @@ export default {
       );
       newCars.forEach((car) => this.getCarImage(car.carId));
     },
-    session(newSession, oldSession) {
-      if (newSession !== oldSession && this.currentEventTime === 0) {
-        this.GenerateXMLResults();
-      }
-    },
     filteredStandings: {
       handler: function () {
         this.calculatePositionInCarClass();
@@ -92,6 +89,7 @@ export default {
       deep: true,
     },
   },
+
   methods: {
     async checkAPIConnection() {
       try {
@@ -104,21 +102,24 @@ export default {
         return false;
       }
     },
+
     async GetStandings() {
       try {
-        await this.axios.get(baseUrl + "watch/standings").then((response) => {
-          this.standings = response.data;
-          this.standings.sort((a, b) => a.position - b.position);
-          this.standings.forEach((element) => {
-            element.lastLapTime = parseFloat(element.lastLapTime).toFixed(3);
-            element.bestLapTime = parseFloat(element.bestLapTime).toFixed(3);
-            element.gapToLeader = element.timeBehindLeader.toFixed(3);
-            element.gap = element.timeBehindNext.toFixed(3);
-            element.fullTeamName =
-              "#" + element.carNumber + " " + element.fullTeamName;
-          });
-        });
-        this.leaderLaps = this.standings[0].lapsCompleted;
+        await retry(() => this.axios.get(baseUrl + "watch/standings")).then(
+          (response) => {
+            this.standings = response.data;
+            this.standings.sort((a, b) => a.position - b.position);
+            this.standings.forEach((element) => {
+              element.lastLapTime = parseFloat(element.lastLapTime).toFixed(3);
+              element.bestLapTime = parseFloat(element.bestLapTime).toFixed(3);
+              element.gapToLeader = element.timeBehindLeader.toFixed(3);
+              element.gap = element.timeBehindNext.toFixed(3);
+              element.fullTeamName =
+                "#" + element.carNumber + " " + element.fullTeamName;
+            });
+          }
+        );
+        this.leaderLaps = this.standings[0]?.lapsCompleted;
         if (!this.session.includes("RACE")) {
           await this.calculateGap();
         } else {
@@ -134,22 +135,24 @@ export default {
     async getSessionInfo() {
       try {
         this.yellowflags = [];
-        await this.axios.get(baseUrl + "watch/sessionInfo").then((response) => {
-          this.trackName = response.data.trackName;
-          this.session = response.data.session.slice(0, -1);
-          this.trackTemp = parseFloat(response.data.trackTemp).toFixed(1);
-          this.airTemp = parseFloat(response.data.ambientTemp).toFixed(1);
-          this.currentEventTime = response.data.currentEventTime;
-          this.remaningTime =
-            response.data.endEventTime - response.data.currentEventTime;
-          this.maxLaps = response.data.maximumLaps;
-          this.remaningTime = secondsToHms(this.remaningTime);
-          this.yellowflags.push(response.data.sectorFlag);
-          for (let i = 0; i < 3; i++) {
-            this[`s${i + 1}`] =
-              this.yellowflags[i]?.includes("YELLOW") || false;
+        await retry(() => this.axios.get(baseUrl + "watch/sessionInfo")).then(
+          (response) => {
+            this.trackName = response.data.trackName;
+            this.session = response.data.session.slice(0, -1);
+            this.trackTemp = parseFloat(response.data.trackTemp).toFixed(1);
+            this.airTemp = parseFloat(response.data.ambientTemp).toFixed(1);
+            this.currentEventTime = response.data.currentEventTime;
+            this.remaningTime =
+              response.data.endEventTime - response.data.currentEventTime;
+            this.maxLaps = response.data.maximumLaps;
+            this.remaningTime = secondsToHms(this.remaningTime);
+            this.yellowflags.push(response.data.sectorFlag);
+            for (let i = 0; i < 3; i++) {
+              this[`s${i + 1}`] =
+                this.yellowflags[i]?.includes("YELLOW") || false;
+            }
           }
-        });
+        );
       } catch (error) {
         this.hasConnection = false;
         this.errorMessage =
@@ -238,18 +241,6 @@ export default {
           error;
       }
     },
-    async GenerateXMLResults() {
-      try {
-        await this.axios
-          .get("https://localhost:7190/api/rF2XML")
-          .then((response) => {
-            console.log(response.data);
-          });
-      } catch (error) {
-        this.errorMessage =
-          ("An error occurred while generating XML results:", error.message);
-      }
-    },
   },
   async created() {
     await this.checkAPIConnection();
@@ -261,11 +252,13 @@ export default {
   },
   mounted: async function () {
     if (await this.checkAPIConnection()) {
-      //this.drawTrack();
-      this.sessionInfoInterval = setInterval(() => {
-        this.getSessionInfo();
-        this.GetStandings();
-        //this.drawCars();
+      this.sessionInfoInterval = setInterval(async () => {
+        try {
+          await retry(() => this.getSessionInfo());
+          await retry(() => this.GetStandings());
+        } catch (error) {
+          console.error("Error in API call:", error);
+        }
       }, 1000);
     }
   },
@@ -273,6 +266,7 @@ export default {
     clearInterval(this.sessionInfoInterval);
   },
 };
+
 const toDataURL = (url) =>
   fetch(url)
     .then((response) => response.blob())
@@ -285,6 +279,7 @@ const toDataURL = (url) =>
           reader.readAsDataURL(blob);
         })
     );
+
 function secondsToHms(d) {
   d = Number(d);
   var h = Math.floor(d / 3600);
@@ -306,6 +301,21 @@ function sec2time(timeInSeconds) {
     milliseconds = time.slice(-3);
 
   return pad(minutes, 2) + ":" + pad(seconds, 2) + "." + pad(milliseconds, 3);
+}
+async function retry(fn, retriesLeft = 5, interval = 1000) {
+  try {
+    return await fn(); // axios.get(url)
+  } catch (error) {
+    if (retriesLeft) {
+      // Wait for a bit before retrying
+      await new Promise((resolve) => setTimeout(resolve, interval));
+      // Try again
+      return retry(fn, retriesLeft - 1, interval);
+    } else {
+      // If no retries left, throw error
+      throw error;
+    }
+  }
 }
 </script>
 
@@ -364,6 +374,15 @@ function sec2time(timeInSeconds) {
             </div>
             <div class="col-md-4">
               <div class="sectors">
+                <SectorFlags :sector="'S1'" :flag="s1 ? 'YELLOW' : ''" />
+                <SectorFlags :sector="'S2'" :flag="s2 ? 'YELLOW' : ''" />
+                <SectorFlags :sector="'S3'" :flag="s3 ? 'YELLOW' : ''" />
+              </div>
+            </div>
+
+            <!--
+            <div class="col-md-4">
+              <div class="sectors">
                 <div class="square" v-if="s1" style="background-color: yellow">
                   <p>S1</p>
                 </div>
@@ -396,6 +415,7 @@ function sec2time(timeInSeconds) {
                 </div>
               </div>
             </div>
+            -->
             <div class="col-md-4" style="align-self: center; text-align: end">
               <p style="font-size: 1.5rem; font-weight: bolder">
                 Ambient Temp: {{ airTemp }}°C / Track Temp: {{ trackTemp }}°C
