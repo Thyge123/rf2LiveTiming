@@ -1,11 +1,9 @@
 <script>
 import TrackMap from "../components/TrackMap.vue";
-import SectorFlags from "../components/SectorFlags.vue";
 const baseUrl = "http://192.168.1.62/rfactor2-api/rest/";
 export default {
   components: {
     TrackMap,
-    SectorFlags,
   },
   data() {
     return {
@@ -42,6 +40,7 @@ export default {
       maxWetNess: 0,
       avgWetNess: 0,
       yellowflags: [],
+      newSectorFlags: [],
       inGarageStall: false,
       s1: false,
       s2: false,
@@ -134,7 +133,6 @@ export default {
     },
     async getSessionInfo() {
       try {
-        this.yellowflags = [];
         await retry(() => this.axios.get(baseUrl + "watch/sessionInfo")).then(
           (response) => {
             this.trackName = response.data.trackName;
@@ -146,11 +144,7 @@ export default {
               response.data.endEventTime - response.data.currentEventTime;
             this.maxLaps = response.data.maximumLaps;
             this.remaningTime = secondsToHms(this.remaningTime);
-            this.yellowflags.push(response.data.sectorFlag);
-            for (let i = 0; i < 3; i++) {
-              this[`s${i + 1}`] =
-                this.yellowflags[i]?.includes("YELLOW") || false;
-            }
+            this.yellowflags = response.data.sectorFlag;
           }
         );
       } catch (error) {
@@ -170,14 +164,17 @@ export default {
         this.errorMessage = (`Failed to load image for car ${carId}:`, error);
       }
     },
+    // Calculate the gap to leader and the gap to the car in front for each driver
     async calculateGap() {
       const leader = this.standings[0];
       this.standings.forEach((car, index) => {
+        // Calculate the gap to the leader for each driver
         car.gapToLeader =
           index === 0 ? 0 : sec2time(car.bestLapTime - leader.bestLapTime);
       });
 
       this.standings.forEach((car, index) => {
+        // Calculate the gap to the car in front for each driver
         car.gap =
           index === 0
             ? 0
@@ -206,10 +203,15 @@ export default {
         }
       });
     },
+    //
     getCarClassColor(carClass) {
+      // Check if there's already a color assigned for the given car class in the randomColors object
       if (!this.randomColors[carClass]) {
+        // If not, generate a random color and assign it to the car class in the randomColors object
         this.randomColors[carClass] = this.getRandomColor();
       }
+      // Return the color for the car class from the carClassColor object if it exists,
+      // otherwise return the color from the randomColors object
       return this.carClassColor[carClass] || this.randomColors[carClass];
     },
     getRandomColor() {
@@ -220,15 +222,19 @@ export default {
       }
       return color;
     },
+    // Calculate the position in car class for each driver
     async calculatePositionInCarClass() {
       try {
         this.standings.forEach((driver) => {
+          // Filter the standings to get drivers in the same car class
           let sameClassDrivers = this.standings.filter(
             (d) => d.carClass === driver.carClass
           );
+          // Filter the same class drivers to get drivers with a higher position
           let higherScoreDrivers = sameClassDrivers.filter(
             (d) => d.position < driver.position
           );
+          // Set the position in car class for the driver as the number of drivers with a higher position plus one
           this.$set(
             driver,
             "positionInCarClass",
@@ -268,14 +274,21 @@ export default {
 };
 
 const toDataURL = (url) =>
+  // Fetch the resource from the provided URL
   fetch(url)
+    // Once the response is received, convert it to a Blob
     .then((response) => response.blob())
     .then(
       (blob) =>
+        // Create a new Promise to handle the next steps
         new Promise((resolve, reject) => {
+          // Create a new FileReader object
           const reader = new FileReader();
+          // When the reader has finished loading, resolve the Promise with the reader's result
           reader.onloadend = () => resolve(reader.result);
+          // If an error occurs while reading, reject the Promise
           reader.onerror = reject;
+          // Start reading the blob as a data URL
           reader.readAsDataURL(blob);
         })
     );
@@ -374,48 +387,19 @@ async function retry(fn, retriesLeft = 5, interval = 1000) {
             </div>
             <div class="col-md-4">
               <div class="sectors">
-                <SectorFlags :sector="'S1'" :flag="s1 ? 'YELLOW' : ''" />
-                <SectorFlags :sector="'S2'" :flag="s2 ? 'YELLOW' : ''" />
-                <SectorFlags :sector="'S3'" :flag="s3 ? 'YELLOW' : ''" />
-              </div>
-            </div>
-
-            <!--
-            <div class="col-md-4">
-              <div class="sectors">
-                <div class="square" v-if="s1" style="background-color: yellow">
-                  <p>S1</p>
-                </div>
                 <div
-                  class="square"
-                  v-else
-                  style="background-color: rgb(18, 197, 0)"
+                  v-for="(flag, index) in yellowflags"
+                  :key="index"
+                  class="sector-box"
+                  :class="{
+                    yellow: flag === 'YELLOW',
+                    green: flag != 'YELLOW',
+                  }"
                 >
-                  <p>S1</p>
-                </div>
-                <div class="square" v-if="s2" style="background-color: yellow">
-                  <p>S2</p>
-                </div>
-                <div
-                  class="square"
-                  v-else
-                  style="background-color: rgb(18, 197, 0)"
-                >
-                  <p>S2</p>
-                </div>
-                <div class="square" v-if="s3" style="background-color: yellow">
-                  <p>S3</p>
-                </div>
-                <div
-                  class="square"
-                  v-else
-                  style="background-color: rgb(18, 197, 0)"
-                >
-                  <p>S3</p>
+                  <p>S{{ index + 1 }}</p>
                 </div>
               </div>
             </div>
-            -->
             <div class="col-md-4" style="align-self: center; text-align: end">
               <p style="font-size: 1.5rem; font-weight: bolder">
                 Ambient Temp: {{ airTemp }}°C / Track Temp: {{ trackTemp }}°C
@@ -524,12 +508,28 @@ async function retry(fn, retriesLeft = 5, interval = 1000) {
   font-weight: bolder;
 }
 
-.square {
+.sector-box {
   height: 50px;
   width: 150px;
-  color: rgb(0, 0, 0);
   text-align: center;
   border-radius: 5px 5px 5px 5px;
+  margin: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sector-box.yellow {
+  background-color: yellow;
+}
+.sector-box.green {
+  background-color: rgb(18, 197, 0);
+}
+
+.sector-box p {
+  font-size: 1.5rem;
+  font-weight: bolder;
+  color: #000;
 }
 
 img {
@@ -563,10 +563,10 @@ td {
 
 .trackMap {
   height: 500px;
-  flex-grow: 1; /* Allow the trackMap div to grow to fill available space */
-  display: flex; /* Use Flexbox layout */
-  justify-content: center; /* Center content horizontally */
-  align-items: center; /* Center content vertically */
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .trackMap svg {
