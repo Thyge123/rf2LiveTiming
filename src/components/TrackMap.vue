@@ -17,12 +17,14 @@ export default {
     };
   },
   methods: {
+    // Get the waypoints from the API and draw the track
     async drawTrack() {
       await this.axios.get(baseUrl + "watch/trackmap").then((response) => {
         this.waypoints = response.data.filter(
           (waypoint) => waypoint.type === 0
         );
       });
+      // Create a line generator
       const line = d3
         .line()
         .curve(d3.curveCardinal) // Apply smoothing to the line
@@ -34,9 +36,9 @@ export default {
         });
 
       // Generate the SVG path
-      const pathData = line(this.waypoints);
+      const pathData = line(this.waypoints); // Generate the SVG path
       // Select the SVG container
-      const svg = d3.select(".trackMap svg");
+      const svg = d3.select(".trackMap svg"); // Select the SVG container
 
       // Append a 'g' element to the SVG, apply a scale transformation to it
       const g = svg.append("g").attr("transform", "scale(-0.9, 0.9)");
@@ -55,7 +57,9 @@ export default {
       svg.attr("width", bbox.width).attr("height", bbox.height);
       svg.attr("viewBox", [bbox.x, bbox.y, bbox.width, bbox.height].join(" "));
     },
+    // Draw the cars on the track
     drawCars() {
+      // Get the car positions from the filteredStandings
       const carPositions = this.filteredStandings.map((s) => ({
         ...s.carPosition,
         position: s.positionInCarClass,

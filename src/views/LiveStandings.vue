@@ -59,6 +59,7 @@ export default {
     };
   },
   computed: {
+    // Filter the standings based on the selected car classes
     filteredStandings() {
       let standings = this.standings;
       if (this.selectedCarClasses.length > 0) {
@@ -68,12 +69,16 @@ export default {
       }
       return standings;
     },
+    // Get the unique car classes from the standings
     uniqueCarClasses() {
+      // Create a Set from the car classes
       const carClasses = new Set(this.standings.map((s) => s.carClass));
+      // Convert the Set to an Array and return it
       return Array.from(carClasses);
     },
   },
   watch: {
+    // Watch for changes in the standings and update the car images
     standings(newStandings, oldStandings) {
       const newCars = newStandings.filter(
         (newCar) =>
@@ -81,6 +86,7 @@ export default {
       );
       newCars.forEach((car) => this.getCarImage(car.carId));
     },
+    // Watch for changes in the filtered standings and update the position in car class
     filteredStandings: {
       handler: function () {
         this.calculatePositionInCarClass();
@@ -90,6 +96,7 @@ export default {
   },
 
   methods: {
+    // Check if the API is reachable
     async checkAPIConnection() {
       try {
         const response = await this.axios.get(
@@ -102,6 +109,7 @@ export default {
       }
     },
 
+    // Get the standings from the API
     async GetStandings() {
       try {
         await retry(() => this.axios.get(baseUrl + "watch/standings")).then(
@@ -131,6 +139,7 @@ export default {
           error.message;
       }
     },
+    // Get the session info from the API
     async getSessionInfo() {
       try {
         await retry(() => this.axios.get(baseUrl + "watch/sessionInfo")).then(
@@ -154,6 +163,7 @@ export default {
           error.message;
       }
     },
+    // Get the car image from the API
     async getCarImage(carId) {
       try {
         const dataUrl = await toDataURL(
