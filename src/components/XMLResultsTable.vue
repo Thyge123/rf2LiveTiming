@@ -35,19 +35,22 @@ export default {
   },
   computed: {
     sortedStandings() {
+      // Sort by position
       let standings = this.filteredStandings
         .slice()
         .sort((a, b) => a.position - b.position);
       if (this.sessionType === "Race") {
         if (standings.length > 0) {
+          // Calculate gap to leader
           let firstFinishTime = standings[0].FinishTime
             ? this.timeToSeconds(standings[0].FinishTime)
-            : 0;
+            : 0; // If leader hasn't finished, gap is 0
           standings = standings.map((standing) => {
-            let gap = "N/A";
+            // Calculate gap to leader
+            let gap = "N/A"; // If driver hasn't finished, gap is N/A
             if (standing.FinishTime) {
-              gap = this.timeToSeconds(standing.FinishTime) - firstFinishTime;
-              gap = this.sec2time(gap);
+              gap = this.timeToSeconds(standing.FinishTime) - firstFinishTime; // If driver has finished, calculate gap
+              gap = this.sec2time(gap); // Convert gap to time string
             }
             return { ...standing, Gap: gap };
           });
