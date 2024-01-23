@@ -101,11 +101,11 @@ export default {
         .attr("fill", "white")
         .attr("text-anchor", "middle") // Center the text horizontally
         .attr(
-          "transform",
+          "transform", //
           (d) =>
             `translate(${d.x}, ${
-              d.z
-            }) scale(-1, 1) translate(${-d.x}, ${-d.z}) `
+              d.z // Translate the text to the car position
+            }) scale(-1, 1) translate(${-d.x}, ${-d.z}) ` // Flip the text horizontally
         );
 
       texts.exit().remove(); // Remove any text elements that are no longer needed
@@ -118,7 +118,7 @@ export default {
     }, 1000);
   },
   beforeDestroy() {
-    clearInterval(this.drawCarsInterval);
+    clearInterval(this.drawCarsInterval); // Stop the interval when the component is destroyed
   },
 };
 </script>

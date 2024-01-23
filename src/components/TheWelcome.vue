@@ -1,13 +1,11 @@
 <script setup>
-import WelcomeItem from "./WelcomeItem.vue";
-import DocumentationIcon from "./icons/IconDocumentation.vue";
-import ToolingIcon from "./icons/IconTooling.vue";
-import EcosystemIcon from "./icons/IconEcosystem.vue";
-import CommunityIcon from "./icons/IconCommunity.vue";
-import SupportIcon from "./icons/IconSupport.vue";
+import logo from "../assets/logo1.png";
 </script>
-
 <template>
+  <div class="container-fluid">
+    <img :src="logo" alt="logo" class="center" />
+  </div>
+  <!--
   <div>
     <WelcomeItem>
       <template #icon>
@@ -97,4 +95,13 @@ import SupportIcon from "./icons/IconSupport.vue";
       >.
     </WelcomeItem>
   </div>
+  -->
 </template>
+<style scoped>
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+}
+</style>

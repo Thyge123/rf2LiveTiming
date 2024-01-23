@@ -10,7 +10,7 @@ export default {
     return {
       isLoading: true,
       tracks: [],
-      trackCourse: "",
+      trackCourse: null,
       standings: [],
       carClassColor: {
         LMH: "#e02d2d",
