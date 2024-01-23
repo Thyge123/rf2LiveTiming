@@ -66,11 +66,8 @@ export default {
     updateTimeString(newTimeString) {
       this.timeString = newTimeString;
     },
-    handleTrackChange(value) {
-      if (value === "null") {
-        this.selectedFile = null;
-      }
-      console.log(this.selectedFile);
+    handleTrackChange() {
+      this.selectedFile = null;
     },
     async getAllTracks() {
       try {

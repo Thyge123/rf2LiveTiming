@@ -40,10 +40,16 @@ export default {
         .sort((a, b) => a.position - b.position);
       if (this.sessionType === "Race") {
         if (standings.length > 0) {
-          let firstFinishTime = this.timeToSeconds(standings[0].FinishTime);
+          let firstFinishTime = standings[0].FinishTime
+            ? this.timeToSeconds(standings[0].FinishTime)
+            : 0;
           standings = standings.map((standing) => {
-            let gap = this.timeToSeconds(standing.FinishTime) - firstFinishTime;
-            return { ...standing, Gap: this.sec2time(gap) };
+            let gap = "N/A";
+            if (standing.FinishTime) {
+              gap = this.timeToSeconds(standing.FinishTime) - firstFinishTime;
+              gap = this.sec2time(gap);
+            }
+            return { ...standing, Gap: gap };
           });
         }
       }
