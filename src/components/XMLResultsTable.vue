@@ -7,10 +7,12 @@ export default {
     selectedCarClass: String,
     searchQuery: String,
     getCarClassColor: Function,
+    sessionType: String,
   },
   data() {
     return {
       isLoading: true,
+      /*
       fields: [
         { key: "details", label: "" },
         { key: "position", label: "POS" },
@@ -20,6 +22,7 @@ export default {
         { key: "BestLapTime", label: "Best" },
         { key: "lapsCompleted", label: "Laps" },
       ],
+      */
       fields2: [
         "lap",
         { key: "s1", label: "S1" },
@@ -31,6 +34,21 @@ export default {
     };
   },
   computed: {
+    sortedStandings() {
+      let standings = this.filteredStandings
+        .slice()
+        .sort((a, b) => a.position - b.position);
+      if (this.sessionType === "Race") {
+        if (standings.length > 0) {
+          let firstFinishTime = this.timeToSeconds(standings[0].FinishTime);
+          standings = standings.map((standing) => {
+            let gap = this.timeToSeconds(standing.FinishTime) - firstFinishTime;
+            return { ...standing, Gap: this.sec2time(gap) };
+          });
+        }
+      }
+      return standings;
+    },
     filteredStandings() {
       return this.standings.filter((standing) => {
         return (
@@ -42,6 +60,44 @@ export default {
         );
       });
     },
+    fields() {
+      let baseFields = [
+        { key: "details", label: "" },
+        { key: "position", label: "POS" },
+        { key: "carClass", label: "Class" },
+        { key: "driverName", label: "Name" },
+        { key: "fullTeamName", label: "Team" },
+        { key: "BestLapTime", label: "Best" },
+        { key: "lapsCompleted", label: "Laps" },
+      ];
+
+      if (this.sessionType === "Race") {
+        baseFields.push({ key: "FinishTime", label: "FinishTime" });
+        baseFields.push({ key: "Gap", label: "Gap" });
+      }
+
+      return baseFields;
+    },
+  },
+  methods: {
+    timeToSeconds(time) {
+      let parts = time.split(":");
+      let seconds = parts[0] * 60 + parseFloat(parts[1]);
+      return seconds;
+    },
+    sec2time(timeInSeconds) {
+      var pad = function (num, size) {
+          return ("000" + num).slice(size * -1);
+        },
+        time = parseFloat(timeInSeconds).toFixed(3),
+        minutes = Math.floor(time / 60) % 60,
+        seconds = Math.floor(time - minutes * 60),
+        milliseconds = time.slice(-3);
+
+      return (
+        pad(minutes, 2) + ":" + pad(seconds, 2) + "." + pad(milliseconds, 3)
+      );
+    },
   },
 };
 </script>
@@ -51,7 +107,7 @@ export default {
     hover
     dark
     borderless
-    :items="filteredStandings"
+    :items="sortedStandings"
     :fields="fields"
   >
     <template #cell(details)="row">

@@ -166,9 +166,11 @@ export default {
     // Get the car image from the API
     async getCarImage(carId) {
       try {
+        // Get the data URL for the car image
         const dataUrl = await toDataURL(
           baseUrl + `/race/car/${carId}/image?type=IMAGE_THUMBNAIL`
         );
+        // Set the car image in the carImages object
         this.carImages[carId] = dataUrl;
       } catch (error) {
         this.errorMessage = (`Failed to load image for car ${carId}:`, error);

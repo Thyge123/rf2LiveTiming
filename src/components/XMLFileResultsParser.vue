@@ -225,7 +225,7 @@ function getFirstExistingTag(xmlDoc, ...tags) {
     v-model="selectedFile"
     style="height: 100%; text-align-last: start"
   >
-    <option :value="null">None</option>
+    <option :value="null">Please select a result file</option>
     <b-form-select-option
       v-for="file in filteredFiles"
       :key="file.id"

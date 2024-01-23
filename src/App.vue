@@ -22,6 +22,9 @@ import logo from "./assets/logo3.png";
               >Track Records</RouterLink
             ></b-nav-item
           >
+          <b-nav-item>
+            <RouterLink to="/XMLResults">Results</RouterLink></b-nav-item
+          >
         </b-navbar-nav>
       </b-navbar>
     </div>

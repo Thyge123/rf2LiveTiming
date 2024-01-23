@@ -36,6 +36,11 @@ const router = new VueRouter({
       name: "TrackRecordsArchive",
       component: () => import("../views/TrackRecordsArchive.vue"),
     },
+    {
+      path: "/XMLResults",
+      name: "XMLResults",
+      component: () => import("../views/XMLResults.vue"),
+    },
   ],
 });
 
