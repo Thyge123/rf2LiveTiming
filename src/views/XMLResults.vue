@@ -109,6 +109,8 @@ export default {
     <div class="row">
       <div class="card text-white bg-dark">
         <div class="card-body">
+          <div class="row"><h2>Results</h2></div>
+          <br />
           <div class="row d-flex">
             <div class="col-md-7">
               <b-form-select
